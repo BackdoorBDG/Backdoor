@@ -8,21 +8,15 @@
 import SwiftUI
 
 extension View {
-	@ViewBuilder
-	func compatNavigationTransition(id: String, ns: Namespace.ID) -> some View {
-		if #available(iOS 18.0, *) {
-			self.navigationTransition(.zoom(sourceID: id, in: ns))
-		} else {
-			self
-		}
-	}
-	
-	@ViewBuilder
-	func compatMatchedTransitionSource(id: String, ns: Namespace.ID) -> some View {
-		if #available(iOS 18.0, *) {
-			self.matchedTransitionSource(id: id, in: ns)
-		} else {
-			self
-		}
-	}
+    @ViewBuilder
+    func compatNavigationTransition(id: String, ns: Namespace.ID) -> some View {
+        // In Swift 5.10/Xcode 15, we only return self since iOS 18 APIs aren't available
+        self
+    }
+    
+    @ViewBuilder
+    func compatMatchedTransitionSource(id: String, ns: Namespace.ID) -> some View {
+        // In Swift 5.10/Xcode 15, we only return self since iOS 18 APIs aren't available
+        self
+    }
 }
