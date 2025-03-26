@@ -1,0 +1,73 @@
+name: Swift 5.10 Compatibility Build
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        
+      - name: Setup Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: '15.0'
+          
+      - name: Install Dependencies
+        run: |
+          curl -LO https://github.com/ProcursusTeam/ldid/releases/download/v2.1.5-procursus7/ldid_macosx_x86_64
+          sudo install -m755 ldid_macosx_x86_64 /usr/local/bin/ldid
+          brew install 7zip gnu-sed
+
+      - name: Clean Build Environment
+        run: |
+          rm -rf ~/Library/Developer/Xcode/DerivedData
+          xcodebuild -project feather.xcodeproj -scheme "feather (Debug)" -sdk iphoneos clean
+
+      - name: Build with Swift 5.10
+        run: |
+          # Build with explicit Swift 5.10 flags and disable optimization
+          xcodebuild \
+            -project feather.xcodeproj \
+            -scheme "feather (Debug)" \
+            -configuration Debug \
+            -sdk iphoneos \
+            -arch arm64 \
+            SWIFT_VERSION=5.10 \
+            SWIFT_OPTIMIZATION_LEVEL=-Onone \
+            IPHONEOS_DEPLOYMENT_TARGET=15.0 \
+            CODE_SIGNING_ALLOWED=NO \
+            ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES=NO
+
+      - name: Package App
+        if: success()
+        run: |
+          mkdir -p packages
+          DERIVED_DATA_PATH=$(xcodebuild -project feather.xcodeproj -scheme "feather (Debug)" -showBuildSettings | grep -m 1 "BUILT_PRODUCTS_DIR" | grep -oE "\/.*")
+          APP_PATH="${DERIVED_DATA_PATH}/feather.app"
+          
+          # Create Payload folder and move app into it
+          mkdir -p Payload
+          cp -R "$APP_PATH" Payload/
+          
+          # Remove code signature
+          rm -rf Payload/feather.app/_CodeSignature
+          
+          # Create IPA
+          zip -r packages/feather_swift5.10_debug.ipa Payload
+          
+          # Clean up
+          rm -rf Payload
+
+      - name: Upload Artifact
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: feather-swift-5.10-build
+          path: packages/feather_swift5.10_debug.ipa
+          if-no-files-found: error
