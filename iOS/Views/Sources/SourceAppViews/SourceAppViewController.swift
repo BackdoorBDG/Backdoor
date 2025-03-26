@@ -52,11 +52,14 @@ class SourceAppViewController: UITableViewController {
     }
     
     private func setupHeader() {
-        if uri.count == 1 && newsData != [] {
+        if uri.count == 1 && !newsData.isEmpty {
+            // Create and configure the header view with proper memory management
             let headerView = UIHostingController(rootView: NewsCardsScrollView(newsData: newsData))
             headerView.view.frame = CGRect(x: 0, y: 0, width: view.frame.width, height: 170)
+            headerView.view.backgroundColor = .clear // Ensure transparent background
             tableView.tableHeaderView = headerView.view
             
+            // Maintain proper parent-child relationship
             addChild(headerView)
             headerView.didMove(toParent: self)
         }

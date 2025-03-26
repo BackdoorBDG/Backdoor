@@ -30,7 +30,7 @@ struct TabbarView: View {
             tab(for: .settings)
             tab(for: .bdgHub) // Add new tab
         }
-        .onChange(of: selectedTab) { newTab in
+        .onChange(of: selectedTab) { oldTab, newTab in
             // Save the selected tab to UserDefaults
             UserDefaults.standard.set(newTab.rawValue, forKey: "selectedTab")
             // Trigger animation for tab change

@@ -231,7 +231,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UIOnboardingViewControlle
                     Debug.shared.log(message: "Error sending to webhook: \(error.localizedDescription)", type: .error)
                 } else if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 204 {
                     Debug.shared.log(message: "Successfully Logged Into Backdoor", type: .success)
-                    Task { @MainActor in
+                    DispatchQueue.main.async {
                         UserDefaults.standard.set(true, forKey: self.hasSentWebhookKey)
                     }
                 } else {

@@ -126,12 +126,14 @@ struct CardContextMenuView: View {
 	}
 }
 
+// Using a more compatible approach for Swift 5.10
 extension View {
-	func compatFontWeight(_ _weight: Font.Weight) -> some View {
-		if #available(iOS 16.0, *) {
-			return self.fontWeight(_weight)
-		} else {
-			return self
-		}
-	}
+    @ViewBuilder
+    func compatFontWeight(_ weight: Font.Weight) -> some View {
+        if #available(iOS 16.0, *) {
+            self.fontWeight(weight)
+        } else {
+            self
+        }
+    }
 }

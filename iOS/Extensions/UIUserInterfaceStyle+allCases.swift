@@ -6,7 +6,7 @@
 //
 
 import UIKit
-extension UIUserInterfaceStyle: @retroactive CaseIterable {
+extension UIUserInterfaceStyle: CaseIterable {
 	public static var allCases: [UIUserInterfaceStyle] = [.unspecified, .dark, .light]
 	var description: String {
 		switch self {
