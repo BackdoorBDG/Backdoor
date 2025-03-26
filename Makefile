@@ -1,4 +1,5 @@
 TARGET_CODESIGN = $(shell which ldid)
+
 PLATFORM = iphoneos
 NAME = feather
 SCHEME ?= 'feather (Debug)'
@@ -10,11 +11,24 @@ TARGET_SYSROOT = $(shell xcrun -sdk $(PLATFORM) --show-sdk-path)
 
 APP_TMP         = $(TMPDIR)/$(NAME)
 STAGE_DIR   = $(APP_TMP)/stage
-APP_DIR     = $(APP_TMP)/Build/Products/$(RELEASE)/$(NAME).app
+APP_DIR 	   = $(APP_TMP)/Build/Products/$(RELEASE)/$(NAME).app
 
-all: package
+# Source files
+SOURCES = iOS/Views/Home/Controllers/HomeViewController.swift iOS/Delegates/HomeDelegate.swift
 
-package: clean-spm
+all: check_sources package
+
+check_sources:
+	@echo "Checking source files..."
+	@for file in $(SOURCES); do \
+		if [ ! -f $$file ]; then \
+			echo "Error: Source file $$file not found!"; \
+			exit 1; \
+		fi \
+	done
+	@echo "All source files are present."
+
+package:
 	@rm -rf $(APP_TMP)
 	
 	@set -o pipefail; \
@@ -42,17 +56,12 @@ package: clean-spm
 	@mkdir -p packages
 
 ifeq ($(TIPA),1)
-	@zip -r9 packages/Backdoor.tipa Payload
+	@zip -r9 packages/$(NAME)-ts.tipa Payload
 else
-	@zip -r9 packages/Backdoor.ipa Payload
+	@zip -r9 packages/$(NAME).ipa Payload
 endif
 
-clean-spm:
-	@swift package clean
-	@xcodebuild -project '$(NAME).xcodeproj' -scheme $(SCHEME) -sdk $(PLATFORM) clean
-	@rm -rf $(APP_TMP)/Build
-
-clean: clean-spm
+clean:
 	@rm -rf $(STAGE_DIR)
 	@rm -rf packages
 	@rm -rf out.dmg
@@ -60,4 +69,4 @@ clean: clean-spm
 	@rm -rf apple-include
 	@rm -rf $(APP_TMP)
 
-.PHONY: apple-include clean clean-spm package
+.PHONY: apple-include
