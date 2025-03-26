@@ -10,7 +10,8 @@ import Foundation
 extension Bundle {
 	static func makeLocalizationBundle(preferredLanguageCode: String? = Preferences.preferredLanguageCode) -> Bundle {
 		if let preferredLangCode = preferredLanguageCode,
-		   let bundle = Bundle(path: Bundle.main.path(forResource: preferredLangCode, ofType: "lproj")!) {
+		   let resourcePath = Bundle.main.path(forResource: preferredLangCode, ofType: "lproj"),
+		   let bundle = Bundle(path: resourcePath) {
 			return bundle
 		}
 		

@@ -62,7 +62,9 @@ class SectionIcons {
 	
 	static public func loadSectionImageFromURL(from url: URL, for cell: UITableViewCell, at indexPath: IndexPath, in tableView: UITableView) {
 		let request = ImageRequest(url: url)
-		SectionIcons.sectionImage(to: cell, with: UIImage(named: "unknown")!)
+		// Use a placeholder image with nil coalescing to avoid force unwrapping
+		let placeholderImage = UIImage(named: "unknown") ?? UIImage(systemName: "questionmark.square") ?? UIImage()
+		SectionIcons.sectionImage(to: cell, with: placeholderImage)
 
 		if let cachedImage = ImagePipeline.shared.cache.cachedImage(for: request)?.image {
 			SectionIcons.sectionImage(to: cell, with: cachedImage)
@@ -74,11 +76,18 @@ class SectionIcons {
 				completion: { result in
 					switch result {
 					case .success(let imageResponse):
-						DispatchQueue.main.async {
+						DispatchQueue.main.async { [weak tableView, weak cell] in
+							// Verify cell is still visible and at the same indexPath
+							guard let tableView = tableView,
+								  let cell = cell,
+								  let visibleCell = tableView.cellForRow(at: indexPath),
+								  visibleCell == cell else {
+								return
+							}
 							SectionIcons.sectionImage(to: cell, with: imageResponse.image)
 						}
-					case .failure(_): break
-//						print(error)
+					case .failure(let error):
+						Debug.shared.log(message: "Image loading failed: \(error.localizedDescription)", type: .debug)
 					}
 				}
 			)
