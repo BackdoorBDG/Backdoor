@@ -13,9 +13,9 @@ jobs:
       - name: Select Xcode Version
         run: |
           sudo xcode-select -s /Applications/Xcode_16.0.app
-          swift --version
+          swift --version  # Will show Swift 6.0, but we'll override it later
 
-      - name: Install dependencies (packages)
+      - name: Install Dependencies
         run: |
           curl -LO https://github.com/ProcursusTeam/ldid/releases/download/v2.1.5-procursus7/ldid_macosx_x86_64
           sudo install -m755 ldid_macosx_x86_64 /usr/local/bin/ldid
@@ -24,22 +24,26 @@ jobs:
       - name: Clean Build Environment
         run: |
           swift package clean
-          xcodebuild -project feather.xcodeproj -scheme "feather (Release)" -sdk iphoneos clean
+          xcodebuild -project feather.xcodeproj -scheme "feather (Release)" -sdk iphoneos clean SWIFT_VERSION=5.10
           rm -rf ~/Library/Developer/Xcode/DerivedData
 
       - name: Compile and Package
-        run: | 
+        run: |
           mkdir upload
+          # Use xcodebuild with explicit SWIFT_VERSION=5.10 and disable optimization
+          xcodebuild -project feather.xcodeproj -scheme "feather (Release)" -configuration Release -sdk iphoneos -arch arm64 SWIFT_VERSION=5.10 IPHONEOS_DEPLOYMENT_TARGET=15.0 CODE_SIGNING_ALLOWED=NO SWIFT_OPTIMIZATION_LEVEL=-Onone
           make package SCHEME="'feather (Release)'" SWIFT_VERSION=5.10 IPHONEOS_DEPLOYMENT_TARGET=15.0
           mv packages/* upload/
 
       - name: Get Version Number
         id: get_version
         run: |
+          # Extract IPA to access Info.plist
+          7z x upload/feather.ipa -oPayload
           VERSION=$( /usr/libexec/PlistBuddy -c "Print CFBundleShortVersionString" Payload/feather.app/Info.plist )
           echo "VERSION=${VERSION}" >> $GITHUB_ENV
 
-      - name: Setup
+      - name: Setup Release Files
         run: |
           mv upload/feather.ipa upload/feather_v${{ env.VERSION }}.ipa
           cp upload/feather_v${{ env.VERSION }}.ipa upload/feather_v${{ env.VERSION }}.tipa
@@ -50,9 +54,10 @@ jobs:
           name: Feather v${{ env.VERSION }}
           tag_name: v${{ env.VERSION }}
           files: |
-            upload/*ipa
+            upload/*.ipa
+            upload/*.tipa
           generate_release_notes: true
           fail_on_unmatched_files: true
           draft: true
         env:
-          GITHUB_TOKEN: ${{ env.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
