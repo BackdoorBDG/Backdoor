@@ -4,16 +4,16 @@ import UIKit
 final class CoreDataManager {
     static let shared = CoreDataManager()
 
-    init() {}
+    private init() {}
     deinit {}
 
     lazy var persistentContainer: NSPersistentContainer = {
         let container = NSPersistentContainer(name: "Feather")
-        container.loadPersistentStores(completionHandler: { (storeDescription, error) in
+        container.loadPersistentStores { _, error in
             if let error = error as NSError? {
                 fatalError("Unresolved error \(error), \(error.userInfo)")
             }
-        })
+        }
         return container
     }()
 
@@ -21,25 +21,15 @@ final class CoreDataManager {
         persistentContainer.viewContext
     }
 
-    func saveContext() {
-        if context.hasChanges {
-            do {
-                try context.save()
-            } catch {
-                Debug.shared.log(message: "CoreDataManager.saveContext: \(error)", type: .critical)
-            }
-        }
+    func saveContext() throws {
+        guard context.hasChanges else { return }
+        try context.save()
     }
 
-    /// Clear all objects from fetch request.
-    func clear<T: NSManagedObject>(request: NSFetchRequest<T>, context: NSManagedObjectContext? = nil) {
+    func clear<T: NSManagedObject>(request: NSFetchRequest<T>, context: NSManagedObjectContext? = nil) throws {
         let context = context ?? self.context
-        let deleteRequest = NSBatchDeleteRequest(fetchRequest: (request as? NSFetchRequest<NSFetchRequestResult>)!)
-        do {
-            _ = try context.execute(deleteRequest)
-        } catch {
-            Debug.shared.log(message: "CoreDataManager.clear: \(error.localizedDescription)", type: .error)
-        }
+        let deleteRequest = NSBatchDeleteRequest(fetchRequest: request as NSFetchRequest<NSFetchRequestResult>)
+        _ = try context.execute(deleteRequest)
     }
 
     func loadImage(from iconUrl: URL?) -> UIImage? {
@@ -91,15 +81,43 @@ final class CoreDataManager {
             return []
         }
     }
+
+    func getDatedCertificate() -> [Certificate] {
+        let request: NSFetchRequest<Certificate> = Certificate.fetchRequest()
+        request.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
+        do {
+            return try context.fetch(request)
+        } catch {
+            Debug.shared.log(message: "CoreDataManager.getDatedCertificate: \(error.localizedDescription)", type: .error)
+            return []
+        }
+    }
+
+    func getCurrentCertificate() -> Certificate? {
+        let certificates = getDatedCertificate()
+        let selectedIndex = Preferences.selectedCert ?? 0
+        guard selectedIndex >= 0 && selectedIndex < certificates.count else { return nil }
+        return certificates[selectedIndex]
+    }
+
+    func getFilesForDownloadedApps(for app: DownloadedApps, getuuidonly: Bool) -> URL {
+        let documentsDirectory = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
+        let uuid = app.uuid ?? UUID().uuidString
+        return getuuidonly ? documentsDirectory.appendingPathComponent(uuid) : documentsDirectory.appendingPathComponent("files/\(uuid)")
+    }
 }
 
 extension NSPersistentContainer {
-    func performBackgroundTask<T>(_ block: @escaping (NSManagedObjectContext) -> T) async -> T {
-        await withCheckedContinuation({ continuation in
+    func performBackgroundTask<T>(_ block: @escaping (NSManagedObjectContext) throws -> T) async rethrows -> T {
+        try await withCheckedThrowingContinuation { continuation in
             self.performBackgroundTask { context in
-                let result = block(context)
-                continuation.resume(returning: result)
+                do {
+                    let result = try block(context)
+                    continuation.resume(returning: result)
+                } catch {
+                    continuation.resume(throwing: error)
+                }
             }
-        })
+        }
     }
 }
