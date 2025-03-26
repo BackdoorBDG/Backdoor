@@ -20,7 +20,7 @@ func signInitialApp(bundle: BundleOptions, mainOptions: SigningMainDataWrapper, 
             try fileManager.createDirectory(at: tmpDir, withIntermediateDirectories: true)
             try fileManager.copyItem(at: appPath, to: tmpDirApp)
             
-            if let info = NSDictionary(contentsOf: tmpDirApp.appendingPathComponent("Info.plist"))!.mutableCopy() as? NSMutableDictionary {
+            if let info = NSDictionary(contentsOf: tmpDirApp.appendingPathComponent("Info.plist"))?.mutableCopy() as? NSMutableDictionary {
                 try updateInfoPlist(infoDict: info, main: mainOptions, options: signingOptions, icon: mainOptions.mainOptions.iconURL, app: tmpDirApp)
                 
                 if let iconsDict = info["CFBundleIcons"] as? [String: Any],
@@ -63,14 +63,14 @@ func signInitialApp(bundle: BundleOptions, mainOptions: SigningMainDataWrapper, 
                 var signedAppObject: NSManagedObject? = nil
                 
                 CoreDataManager.shared.addToSignedApps(
-                    version: (mainOptions.mainOptions.version ?? bundle.version)!,
-                    name: (mainOptions.mainOptions.name ?? bundle.name)!,
-                    bundleidentifier: (mainOptions.mainOptions.bundleId ?? bundle.bundleId)!,
+                    version: mainOptions.mainOptions.version ?? bundle.version ?? "1.0",
+                    name: mainOptions.mainOptions.name ?? bundle.name ?? String.localized("UNKNOWN"),
+                    bundleidentifier: mainOptions.mainOptions.bundleId ?? bundle.bundleId ?? "com.unknown.app",
                     iconURL: iconURL,
                     uuid: signedUUID,
                     appPath: appPath.lastPathComponent,
-                    timeToLive: mainOptions.mainOptions.certificate?.certData?.expirationDate ?? Date(),
-                    teamName: mainOptions.mainOptions.certificate?.certData?.name ?? "",
+                    timeToLive: mainOptions.mainOptions.certificate?.certData?.expirationDate ?? Date.distantFuture,
+                    teamName: mainOptions.mainOptions.certificate?.certData?.name ?? "Unknown Team",
                     originalSourceURL: bundle.sourceURL
                 ) { result in
                     switch result {
@@ -79,14 +79,21 @@ func signInitialApp(bundle: BundleOptions, mainOptions: SigningMainDataWrapper, 
                     case .failure(let error):
                         Logger.shared.log(message: "signApp: \(error)", type: .error)
                         completion(.failure(error))
+                        return // Exit early to avoid proceeding with nil
                     }
                 }
                 
-                Logger.shared.log(message: String.localized("SUCCESS_SIGNED", arguments: "\((mainOptions.mainOptions.name ?? bundle.name) ?? String.localized("UNKNOWN"))"), type: .success)
-                Logger.shared.log(message: "============================================")
-                
-                UIApplication.shared.isIdleTimerDisabled = false
-                completion(.success((signedPath, signedAppObject!)))
+                // Only proceed if signedAppObject is non-nil
+                if let signedAppObject = signedAppObject {
+                    Logger.shared.log(message: String.localized("SUCCESS_SIGNED", arguments: "\((mainOptions.mainOptions.name ?? bundle.name) ?? String.localized("UNKNOWN"))"), type: .success)
+                    Logger.shared.log(message: "============================================")
+                    UIApplication.shared.isIdleTimerDisabled = false
+                    completion(.success((signedPath, signedAppObject)))
+                } else {
+                    let error = NSError(domain: "AppSigningErrorDomain", code: 2, userInfo: [NSLocalizedDescriptionKey: "Failed to create signed app object"])
+                    Logger.shared.log(message: "signApp: \(error)", type: .critical)
+                    completion(.failure(error))
+                }
             }
         } catch {
             DispatchQueue.main.async {
