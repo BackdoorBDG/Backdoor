@@ -116,10 +116,33 @@ final class CoreDataManager {
         return certificates[selectedIndex]
     }
     
+    // This method should be replaced with the implementation in CoreDataManager+DownloadedApps.swift
+    @available(*, deprecated, message: "Use the implementation in CoreDataManager+DownloadedApps.swift instead")
     func getFilesForDownloadedApps(for app: DownloadedApps, getuuidonly: Bool) -> URL {
+        // Call through to the complete implementation
+        return getFilesForDownloadedAppsImplementation(for: app, getuuidonly: getuuidonly)
+    }
+    
+    // Private helper to avoid recursive calls
+    private func getFilesForDownloadedAppsImplementation(for app: DownloadedApps, getuuidonly: Bool) -> URL {
+        // We need to check if the app has the necessary properties for the full implementation
+        guard let uuid = app.uuid, let appPath = app.appPath, let dir = app.directory else {
+            // Fall back to the simple implementation if properties are missing
+            let documentsDirectory = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
+            let uuidString = app.uuid ?? UUID().uuidString
+            return getuuidonly ? documentsDirectory.appendingPathComponent(uuidString) : documentsDirectory.appendingPathComponent("files/\(uuidString)")
+        }
+        
+        // Use the full implementation if all properties are available
         let documentsDirectory = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
-        let uuid = app.uuid ?? UUID().uuidString
-        return getuuidonly ? documentsDirectory.appendingPathComponent(uuid) : documentsDirectory.appendingPathComponent("files/\(uuid)")
+        var path = documentsDirectory
+            .appendingPathComponent("Apps")
+            .appendingPathComponent(dir)
+            .appendingPathComponent(uuid)
+        
+        if !getuuidonly { path = path.appendingPathComponent(appPath) }
+        
+        return path
     }
 }
 

@@ -94,13 +94,4 @@ final class OpenAIService {
     }
 }
 
-// Assuming this struct exists elsewhere in your project
-struct OpenAIResponse: Codable {
-    struct Choice: Codable {
-        let message: Message
-    }
-    struct Message: Codable {
-        let content: String
-    }
-    let choices: [Choice]
-}
+// Using OpenAIResponse from iOS/Common/OpenAIResponse.swift

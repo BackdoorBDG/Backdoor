@@ -1,4 +1,8 @@
 import CoreData
+import Foundation
+
+// Import TweakHandler for FileProcessingError
+@_implementationOnly import struct Shared.Magic.TweakHandler.FileProcessingError
 
 extension CoreDataManager {
     /// clear certificates data
