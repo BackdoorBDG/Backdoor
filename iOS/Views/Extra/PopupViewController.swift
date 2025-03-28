@@ -40,6 +40,8 @@ class PopupViewController: UIViewController {
             if #available(iOS 15.0, *) {
                 var config = UIButton.Configuration.filled()
                 config.contentInsets = NSDirectionalEdgeInsets(top: 15, leading: 20, bottom: 15, trailing: 20)
+                config.background.backgroundColor = color
+                config.baseForegroundColor = titlecolor
                 self.configuration = config
             } else {
                 contentEdgeInsets = UIEdgeInsets(top: 15, left: 20, bottom: 15, right: 20)

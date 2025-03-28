@@ -207,7 +207,8 @@ class ChatViewController: UIViewController, UITableViewDataSource, UITableViewDe
                             // Execute commands
                             let commands = self?.extractCommands(from: response) ?? []
                             for (command, parameter) in commands {
-                                AppContextManager.shared.executeCommand(command, parameter: parameter) { commandResult in
+                                AppContextManager.shared.executeCommand(command, parameter: parameter) { [weak self] commandResult in
+                                    guard let self = self else { return }
                                     DispatchQueue.main.async {
                                         let systemMessageContent: String
                                         switch commandResult {
@@ -217,10 +218,10 @@ class ChatViewController: UIViewController, UITableViewDataSource, UITableViewDe
                                             systemMessageContent = "Unknown command: \(cmd)"
                                         }
                                         do {
-                                            let systemMessage = try CoreDataManager.shared.addMessage(to: self!.currentSession, sender: "system", content: systemMessageContent)
-                                            self?.messages.append(systemMessage)
-                                            self?.tableView.reloadData()
-                                            self?.scrollToBottom()
+                                            let systemMessage = try CoreDataManager.shared.addMessage(to: self.currentSession, sender: "system", content: systemMessageContent)
+                                            self.messages.append(systemMessage)
+                                            self.tableView.reloadData()
+                                            self.scrollToBottom()
                                         } catch {
                                             Logger.shared.log(message: "Failed to add system message: \(error)", type: .error)
                                         }
